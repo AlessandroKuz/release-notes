@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.2.1] - 2026-06-24
+
+### Other
+- docs: add RELEASE file section, no-commit warning, and commit message suggestion (fd8a47d)
+
+---
+
 ## [v0.2.0] - 2026-06-24
 
 ### Added

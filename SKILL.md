@@ -86,9 +86,23 @@ Format (keepachangelog.com, one section per version):
 - Prepend new version entry at top of file (newest first)
 - If the last tag was the initial commit or no tag exists, mark as `## [v0.1.0]` (initial release)
 - CHANGELOG and pyproject.toml are generated as unstaged artifacts — user reviews before tagging
-- Derive GitHub compare URL from `git remote get-url origin`. Normalize SSH/HTTPS, strip `.git`. Skip if no remote, no previous tag, or non-GitHub.
 
-### 5. Generate RELEASE-vX.Y.Z.md + Output release summary
+### 4a. Generate RELEASE-v<NEXT>.md (disposable)
+
+Generate alongside the CHANGELOG update. Same categorized commits as Section 4,
+but in prose-friendly format (no hash suffixes). **Apply skip-empty-section rule**:
+omit any category heading with zero commits.
+
+End with two footer lines:
+- `**Changelog:**` + `[CHANGELOG.md](CHANGELOG.md)`
+- `**Full Changelog:**` + compare URL derived from `git remote get-url origin`
+  (normalize SSH/HTTPS, strip `.git`. Skip if no remote, no previous tag,
+  or non-GitHub.)
+
+> **Warning:** Do NOT commit this file. It is a disposable artifact for `gh release create`.
+> After publishing: **`rm RELEASE-v<NEXT>.md`** — delete immediately.
+
+### 5. Output release summary
 
 After all file changes, print:
 
@@ -107,17 +121,37 @@ Example:
 and project filtering. It also fixes the theme toggle flash on
 first load and updates dependencies to Django 6.0.3."
 
+### Suggested commit message
+
+Derive `<type>` from dominant category in this release batch:
+- Breaking changes present → `feat!` or `fix!`
+- Any `feat` (no breaking) → `feat`
+- Only `fix` → `fix`
+- Only `refactor` → `refactor`
+- Only `update` → `update`
+- Only chore/docs/etc → `chore`
+
+If `caveman-commit` or another dedicated commit-message skill is available
+in the agent's skills, suggest invoking it for a compressed message.
+Otherwise, use the standard Conventional Commits format:
+
+  <type>(<scope>): <description>
+
+Append `!` for breaking changes (e.g. `feat!:`). Scope is optional —
+omit if none applies.
+
 ### Files modified (unstaged — review first):
 - pyproject.toml
 - CHANGELOG.md
-- RELEASE-v1.2.3.md (disposable — delete after publishing)
+- RELEASE-v1.2.3.md (⚠️ do NOT commit — disposable, delete after publish)
 
 ### Next steps — review and run:
   git diff                         # verify version + changelog
 
   git add -A
+  # Use suggested message from the section above
   git commit --amend --no-edit     # bundle into last code commit (optional)
-  # or: git commit -m "release: v1.2.3"
+  # or: git commit -m "<type>(<scope>): <description>"
 
   git tag -a v1.2.3 -m "v1.2.3"
   git push && git push --tags
@@ -129,22 +163,6 @@ first load and updates dependencies to Django 6.0.3."
   just build && just up          # docker deploy
   # or: ./deploy.sh              # VPS deploy
 ```
-
-The `gh release create` command publishes to GitHub Releases using
-a disposable `RELEASE-v<version>.md` file. Generate it alongside the
-CHANGELOG update with the same categorized content, then delete after
-publishing (`rm RELEASE-v1.2.3.md`).
-
-The RELEASE file body includes categorized highlights (same as CHANGELOG
-section but prose-friendly) and ends with two footer lines:
-
-```
-**Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
-**Full Changelog**: https://github.com/user/repo/compare/v<PREV>...v<NEXT>
-```
-
-The first links to the curated per-version file. The second links to the
-raw commit diff on GitHub (omitted if no previous tag or non-GitHub remote).
 
 ### 6. Show deploy commands
 
@@ -166,3 +184,4 @@ Provide deploy commands detected from project context:
 - No separate "release commit" generated — CHANGELOG and pyproject.toml are unstaged
   artifacts. Tag the last code commit directly. Use `git commit --amend --no-edit` to
   bundle into that commit if desired.
+- No em dashes (—). Use other punctuation (: ; , .) in generated release text.

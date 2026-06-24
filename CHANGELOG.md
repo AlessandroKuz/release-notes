@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.2.0] - 2026-06-24
+
+### Added
+- feat: add gh release create to deploy workflow (ff1c91c)
+
+---
+
 ## [v0.1.0] - 2026-06-24
 
 ### Added

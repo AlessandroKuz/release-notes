@@ -19,6 +19,7 @@ create/update CHANGELOG.md, output release summary + git/deploy commands.
 ## Workflow
 
 ### 1. Read git context
+
 - Find the latest tag: `git describe --tags --abbrev=0` (fallback: initial state)
 - Gather commits since that tag: `git log <tag>..HEAD --oneline --no-decorate`
 - Parse each commit as `<type>(<scope>): <description>`
@@ -32,9 +33,11 @@ create/update CHANGELOG.md, output release summary + git/deploy commands.
   - `!` suffix or `BREAKING CHANGE` footer -> **Breaking Changes** (cross-category)
 
 ### 2. Determine next version
+
 Use the current version from `pyproject.toml` (field `version`).
 Strip leading `v` for comparison, add it back for git tags.
 Semver bump rules:
+
 - Breaking Changes -> **major** (X+1.0.0)
 - Any `feat` -> **minor** (0.X+1.0)
 - Only fix/update/refactor/chore/docs -> **patch** (0.0.X+1)
@@ -42,10 +45,12 @@ Semver bump rules:
 If the user specifies an explicit version (e.g. "tag v2.0.0"), use that instead.
 
 ### 3. Update pyproject.toml
+
 Read the current `version = "x.y.z"` line. Replace with the new version.
 Keep all other content unchanged.
 
 ### 4. Generate CHANGELOG.md
+
 If no CHANGELOG.md exists, create one with header `# Changelog`.
 Format (keepachangelog.com, one section per version):
 
@@ -80,8 +85,11 @@ Format (keepachangelog.com, one section per version):
 - Date format: ISO 8601 (YYYY-MM-DD)
 - Prepend new version entry at top of file (newest first)
 - If the last tag was the initial commit or no tag exists, mark as `## [v0.1.0]` (initial release)
+- CHANGELOG and pyproject.toml are generated as unstaged artifacts — user reviews before tagging
+- Derive GitHub compare URL from `git remote get-url origin`. Normalize SSH/HTTPS, strip `.git`. Skip if no remote, no previous tag, or non-GitHub.
 
-### 5. Output release summary
+### 5. Generate RELEASE-vX.Y.Z.md + Output release summary
+
 After all file changes, print:
 
 ```
@@ -99,30 +107,62 @@ Example:
 and project filtering. It also fixes the theme toggle flash on
 first load and updates dependencies to Django 6.0.3."
 
-### Files modified:
+### Files modified (unstaged — review first):
 - pyproject.toml
 - CHANGELOG.md
+- RELEASE-v1.2.3.md (disposable — delete after publishing)
 
 ### Next steps — review and run:
+  git diff                         # verify version + changelog
+
   git add -A
-  git commit -m "release: v1.2.3"
+  git commit --amend --no-edit     # bundle into last code commit (optional)
+  # or: git commit -m "release: v1.2.3"
+
   git tag -a v1.2.3 -m "v1.2.3"
   git push && git push --tags
+
+  gh release create v1.2.3 \
+    --title "v1.2.3" \
+    --notes-file RELEASE-v1.2.3.md
 
   just build && just up          # docker deploy
   # or: ./deploy.sh              # VPS deploy
 ```
 
+The `gh release create` command publishes to GitHub Releases using
+a disposable `RELEASE-v<version>.md` file. Generate it alongside the
+CHANGELOG update with the same categorized content, then delete after
+publishing (`rm RELEASE-v1.2.3.md`).
+
+The RELEASE file body includes categorized highlights (same as CHANGELOG
+section but prose-friendly) and ends with two footer lines:
+
+```
+**Changelog**: [`CHANGELOG.md`](CHANGELOG.md)
+**Full Changelog**: https://github.com/user/repo/compare/v<PREV>...v<NEXT>
+```
+
+The first links to the curated per-version file. The second links to the
+raw commit diff on GitHub (omitted if no previous tag or non-GitHub remote).
+
 ### 6. Show deploy commands
+
 Provide deploy commands detected from project context:
+
 - If `docker-compose.yml` + `deploy.sh` exist: show both options
 - If only `Dockerfile`: show `docker build` + `docker push`
 - If neither: show `git push --tags` as minimal step
+- If `gh` CLI is available: suggest `gh release create` as optional publishing step
 
 ## Notes
+
 - Do NOT auto-execute git commands — user reviews first
 - Do NOT auto-push or auto-deploy
 - ALWAYS read current pyproject.toml version before bumping
 - Preserve exact formatting of pyproject.toml (quoting, spacing)
 - Use the current date in ISO format
 - Commit messages are already written in English — keep them as-is for release notes
+- No separate "release commit" generated — CHANGELOG and pyproject.toml are unstaged
+  artifacts. Tag the last code commit directly. Use `git commit --amend --no-edit` to
+  bundle into that commit if desired.
